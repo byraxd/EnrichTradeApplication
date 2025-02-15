@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/products")
 public class ProductController {
@@ -21,9 +19,8 @@ public class ProductController {
     private ProductService productService;
 
     /**
-     *
      * @param file - csv file, that should be .csv, and should contain values productId and productName.
-     * @return - returning uploaded to redis database list of parsed products from .csv file
+     * @return - returning uploaded to redis database list of parsed products from .csv or .json file
      */
     @PostMapping("/uploads")
     public ResponseEntity<Flux<Product>> uploadProducts(@RequestParam("file") MultipartFile file) {

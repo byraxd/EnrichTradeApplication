@@ -1,6 +1,8 @@
 package com.example.app.service.impl;
 
 import com.example.app.entity.Product;
+import com.example.app.parser.ProductParser;
+import com.example.app.parser.service.ProductParserService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,17 +18,20 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-
 @ExtendWith(MockitoExtension.class)
 public class ProductServiceImplTest {
-
 
     @Mock
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
     @Mock
     private ReactiveValueOperations<String, String> valueOperations;
+
+    @Mock
+    private ProductParser productParser;
+
+    @Mock
+    private ProductParserService productParserService;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -49,7 +54,13 @@ public class ProductServiceImplTest {
     }
 
     @Test
-    void test_uploadProducts_whenCsvFileIsValid() throws IOException {
+    void test_uploadProducts_whenCsvFileIsValid() {
+        Product product1 = Product.builder().productId(1).productName("FirstProduct").build();
+        Product product2 = Product.builder().productId(2).productName("SecondProduct").build();
+
+        Mockito.when(productParser.getParser(file)).thenReturn(productParserService);
+        Mockito.when(productParserService.parse(file)).thenReturn(Flux.just(product1, product2));
+
         Flux<Product> products = productService.uploadProducts(file);
 
         Assertions.assertNotNull(products);
@@ -60,12 +71,15 @@ public class ProductServiceImplTest {
     }
 
     @Test
-    void test_uploadProducts_whenCsvFileIsEmpty() throws IOException {
+    void test_uploadProducts_whenCsvFileIsEmpty() {
         file = new MockMultipartFile(
                 "product.csv",
                 "product.csv",
                 "text/csv",
                 "".getBytes());
+
+        Mockito.when(productParser.getParser(file)).thenReturn(productParserService);
+        Mockito.when(productParserService.parse(file)).thenReturn(Flux.empty());
 
         Flux<Product> products = productService.uploadProducts(file);
 
