@@ -1,9 +1,10 @@
 package com.example.app.service;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 
 public interface TradeService {
 
-    ByteArrayInputStream getTrade(InputStream inputStream);
+    ByteArrayInputStream getTrade(MultipartFile file);
 }
