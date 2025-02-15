@@ -9,8 +9,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -19,9 +21,15 @@ public class TradeController {
     @Autowired
     private TradeService tradeService;
 
-    @PostMapping(value = "/enrich", consumes = "text/csv", produces = "text/csv")
-    public ResponseEntity<byte[]> enrichCSV(@RequestParam("file") byte[] file) {
-        ByteArrayInputStream inputStream = tradeService.getTrade(new ByteArrayInputStream(file));
+    /**
+     *
+     * @param file - csv file, that should be .csv, and should contain values date, productId, currency, price.
+     * @return - Modified file
+     * @throws IOException if error while method reading file occurs
+     */
+    @PostMapping(value = "/enrich", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = "text/csv")
+    public ResponseEntity<byte[]> enrichCSV(@RequestParam("file") MultipartFile file) throws IOException {
+        ByteArrayInputStream inputStream = tradeService.getTrade(file.getInputStream());
         byte[] data = inputStream.readAllBytes();
 
         HttpHeaders headers = new HttpHeaders();
