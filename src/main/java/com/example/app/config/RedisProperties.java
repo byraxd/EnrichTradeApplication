@@ -1,4 +1,4 @@
-package com.example.app.redis;
+package com.example.app.config;
 
 import lombok.Getter;
 import lombok.Setter;
