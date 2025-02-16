@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -30,23 +31,23 @@ public class TradeServiceImpl implements TradeService {
     private TradeParser tradeParser;
 
     /**
-     * Accepts a file (CSV, JSON, or XML) containing trade records and returns an enriched CSV file.
+     * Accepts a file (CSV, JSON) containing trade records and returns an enriched CSV file.
      * Each trade record is enriched by validating its date format and replacing the product ID with a product name
      * from Redis (or "Missing Product Name" if not found).
      *
      * @param file the input file with trade records (expected fields: date, productId, currency, price)
-     * @return a ByteArrayInputStream representing the enriched CSV content.
+     * @return a Mono<byte[]> representing the enriched CSV content.
      */
     @Override
-    public ByteArrayInputStream getTrade(MultipartFile file) {
+    public Mono<byte[]> getTrade(MultipartFile file) {
 
-        List<String> csvLines = tradeParser.getParser(file).parse(file)
+        return tradeParser.getParser(file)
+                .parse(file)
                 .flatMap(this::enrichTrade)
-                .collectList()
-                .map(this::convertTradesToCsv)
-                .block();
-
-        return new ByteArrayInputStream(String.join("\n", csvLines).getBytes());
+                .map(this::convertTradeIntoLine)
+                .startWith("date,productName,currency,price")
+                .reduce((line1, line2) -> line1 + "\n" + line2)
+                .map(String::getBytes);
     }
 
     /**
@@ -57,6 +58,11 @@ public class TradeServiceImpl implements TradeService {
      */
     private Mono<Trade> enrichTrade(Trade trade) {
         validateDateFormat(trade.getDate(), trade);
+
+        if(trade.getDate().equals("invalidDate")) {
+            return Mono.empty();
+        }
+
         String key = "product:" + trade.getProductId();
         return redisTemplate.opsForValue().get(key)
                 .defaultIfEmpty("Missing Product Name")
@@ -78,28 +84,21 @@ public class TradeServiceImpl implements TradeService {
             LocalDate.parse(date, formatter);
         } catch (DateTimeParseException ex) {
             log.error("Invalid date format for trade {}: {}", trade, ex.getMessage());
+            trade.setDate("invalidDate");
         }
     }
 
     /**
      * Converts a list of enriched trades into CSV-formatted lines (with a header).
      *
-     * @param trades the list of enriched trades.
-     * @return a List of strings representing the CSV lines.
+     * @param trade - simple java object, that contains field for comfortable converting into csv line.
+     * @return - String which contains all values of field in trade.
      */
-    private List<String> convertTradesToCsv(List<Trade> trades) {
-        List<String> lines = new ArrayList<>();
-
-        lines.add("date,productName,currency,price");
-
-        for (Trade trade : trades) {
-            String line = String.join(",",
-                    trade.getDate(),
-                    trade.getProductName(),
-                    trade.getCurrency(),
-                    trade.getPrice());
-            lines.add(line);
-        }
-        return lines;
+    private String convertTradeIntoLine(Trade trade) {
+        return String.join(",",
+                trade.getDate(),
+                trade.getProductName(),
+                trade.getCurrency(),
+                trade.getPrice());
     }
 }

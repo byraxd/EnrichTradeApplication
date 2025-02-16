@@ -26,6 +26,7 @@ public class ProductServiceImpl implements ProductService {
      */
     @Override
     public Flux<Product> uploadProducts(MultipartFile file) {
+
         log.info("Uploading products to redis database");
 
         return productParser.getParser(file)

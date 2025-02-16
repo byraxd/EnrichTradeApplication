@@ -73,10 +73,10 @@ public class TradeServiceImplTest {
         Mockito.when(tradeParser.getParser(file)).thenReturn(tradeParserService);
         Mockito.when(tradeParserService.parse(file)).thenReturn(Flux.just(trade1, trade2));
 
-        ByteArrayInputStream result = tradeService.getTrade(file);
+        byte[] result = tradeService.getTrade(file).block();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(result, StandardCharsets.UTF_8));
-        List<String> lines = new ArrayList<>(reader.lines().toList());
+        BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(result), StandardCharsets.UTF_8));
+        List<String> lines = reader.lines().toList();
 
         List<String> expected = List.of(
                 "date,productName,currency,price",
@@ -99,10 +99,10 @@ public class TradeServiceImplTest {
         Mockito.when(tradeParser.getParser(file)).thenReturn(tradeParserService);
         Mockito.when(tradeParserService.parse(file)).thenReturn(Flux.empty());
 
-        ByteArrayInputStream result = tradeService.getTrade(file);
+        byte[] result = tradeService.getTrade(file).block();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(result, StandardCharsets.UTF_8));
-        List<String> lines = new ArrayList<>(reader.lines().toList());
+        BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(result), StandardCharsets.UTF_8));
+        List<String> lines = reader.lines().toList();
 
         List<String> expected = List.of("date,productName,currency,price");
 

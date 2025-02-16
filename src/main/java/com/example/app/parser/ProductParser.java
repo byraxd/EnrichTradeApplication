@@ -3,6 +3,7 @@ package com.example.app.parser;
 import com.example.app.parser.service.ProductParserService;
 import com.example.app.parser.service.impl.CsvProductParserServiceImpl;
 import com.example.app.parser.service.impl.JsonProductParserServiceImpl;
+import com.example.app.parser.service.impl.XmlProductParserServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +15,8 @@ public class ProductParser {
     private CsvProductParserServiceImpl csvParser;
     @Autowired
     private JsonProductParserServiceImpl jsonParser;
+    @Autowired
+    private XmlProductParserServiceImpl xmlParser;
 
     public ProductParserService getParser(MultipartFile file) {
         String fileName = file.getOriginalFilename();
@@ -23,6 +26,9 @@ public class ProductParser {
         }
         if (fileName.endsWith(".json")) {
             return jsonParser;
+        }
+        if(fileName.endsWith(".xml")) {
+            return xmlParser;
         }
         throw new IllegalArgumentException("Unsupported file type");
     }
