@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayInputStream;
 
@@ -25,14 +26,16 @@ public class TradeController {
      * @return - Modified file
      */
     @PostMapping(value = "/enrich", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = "text/csv")
-    public ResponseEntity<byte[]> enrichCSV(@RequestParam("file") MultipartFile file) {
-        ByteArrayInputStream inputStream = tradeService.getTrade(file);
-        byte[] data = inputStream.readAllBytes();
+    public Mono<ResponseEntity<byte[]>> enrichCSV(@RequestParam("file") MultipartFile file) {
+        return tradeService.getTrade(file)
+                .map(data -> {
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.valueOf("text/csv"));
+                    headers.setContentDispositionFormData("attachment", "trade.csv");
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.valueOf("text/csv"));
-        headers.setContentDispositionFormData("attachment", "trade.csv");
-
-        return ResponseEntity.ok().headers(headers).body(data);
+                    return ResponseEntity.ok()
+                            .headers(headers)
+                            .body(data);
+                });
     }
 }
