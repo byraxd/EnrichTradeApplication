@@ -1,6 +1,6 @@
-package com.example.app.parser.service.impl;
+package com.example.app.service.impl;
 
-import com.example.app.parser.service.JedisService;
+import com.example.app.service.JedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
@@ -12,7 +12,7 @@ public class JedisServiceImpl implements JedisService {
     private Jedis jedis;
 
     @Override
-    public String saveKeyValue(String key, String value) {
+    public String setValueByKey(String key, String value) {
         return jedis.set(key, value);
     }
 
