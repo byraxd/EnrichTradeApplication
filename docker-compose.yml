@@ -1,0 +1,33 @@
+version: '1.0'
+
+services:
+  app:
+    image: enrich-trades-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enrich-trades-container
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+    environment:
+      SPRING_REDIS_HOST: localhost
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - network
+
+  redis:
+    image: redis:latest
+    container_name: redis-container
+    ports:
+      - "6379:6379"
+    volumes:
+      - /path/to/local/dаta:/root/redis
+      - /path/to/local/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - network
+
+networks:
+  network:
+    driver: bridge

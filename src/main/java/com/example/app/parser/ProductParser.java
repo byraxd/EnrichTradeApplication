@@ -8,28 +8,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 public class ProductParser {
 
+    Map<String, ProductParserService> map;
+
     @Autowired
-    private CsvProductParserServiceImpl csvParser;
-    @Autowired
-    private JsonProductParserServiceImpl jsonParser;
-    @Autowired
-    private XmlProductParserServiceImpl xmlParser;
+    public ProductParser(CsvProductParserServiceImpl csvParser, JsonProductParserServiceImpl jsonParser, XmlProductParserServiceImpl xmlParser) {
+
+        map = new HashMap<>();
+
+        map.put(".csv", csvParser);
+        map.put(".json", jsonParser);
+        map.put(".xml", xmlParser);
+    }
 
     public ProductParserService getParser(MultipartFile file) {
         String fileName = file.getOriginalFilename();
 
-        if (fileName.endsWith(".csv")) {
-            return csvParser;
-        }
-        if (fileName.endsWith(".json")) {
-            return jsonParser;
-        }
-        if(fileName.endsWith(".xml")) {
-            return xmlParser;
-        }
-        throw new IllegalArgumentException("Unsupported file type");
+        if(fileName.isEmpty()) throw new IllegalArgumentException("Filename cannot be empty");
+
+        return map.entrySet().stream()
+                .filter(entry -> fileName.endsWith(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported file type"));
     }
 }
