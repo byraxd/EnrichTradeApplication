@@ -15,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 
 @Service
 @Slf4j
@@ -28,7 +29,7 @@ public class CsvTradeParserServiceImpl implements TradeParserService {
      */
     @Override
     public Flux<Trade> parse(MultipartFile file) {
-        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             HeaderColumnNameMappingStrategy<TradeRepresentation> strategy = new HeaderColumnNameMappingStrategy<>();
             strategy.setType(TradeRepresentation.class);
 
