@@ -5,18 +5,16 @@ import com.example.app.parser.TradeParser;
 import com.example.app.service.TradeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @Slf4j
@@ -25,10 +23,17 @@ public class TradeServiceImpl implements TradeService {
     @Autowired
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
+    @Value("${spring.cloud.stream.bindings.tradeEvent-out-0.destination}")
+    private String bindingName;
+
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     @Autowired
+    private StreamBridge streamBridge;
+
+    @Autowired
     private TradeParser tradeParser;
+
 
     /**
      * Accepts a file (CSV, JSON) containing trade records and returns an enriched CSV file.
@@ -43,7 +48,15 @@ public class TradeServiceImpl implements TradeService {
 
         return tradeParser.getParser(file)
                 .parse(file)
-                .flatMap(this::enrichTrade)
+                .flatMap(trade -> enrichTrade(trade)
+                        .doOnNext(enrichedTrade -> {
+                            boolean isSent = streamBridge.send(bindingName, enrichedTrade);
+                            if(isSent){
+                                log.info("Message was sent successfully: {}", enrichedTrade);
+                            }else {
+                                log.error("Message wasn't sent: {}", enrichedTrade);
+                            }
+                        }))
                 .map(this::convertTradeIntoLine)
                 .startWith("date,productName,currency,price")
                 .reduce((line1, line2) -> line1 + "\n" + line2)
@@ -59,7 +72,7 @@ public class TradeServiceImpl implements TradeService {
     private Mono<Trade> enrichTrade(Trade trade) {
         validateDateFormat(trade.getDate(), trade);
 
-        if(trade.getDate().equals("invalidDate")) {
+        if (trade.getDate().equals("invalidDate")) {
             return Mono.empty();
         }
 

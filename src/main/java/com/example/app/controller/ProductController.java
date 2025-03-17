@@ -24,6 +24,7 @@ public class ProductController {
      */
     @PostMapping("/uploads")
     public ResponseEntity<Flux<Product>> uploadProducts(@RequestParam("file") MultipartFile file) {
+        System.out.println("Current working directory: " + System.getProperty("user.dir"));
         return ResponseEntity.ok(productService.uploadProducts(file));
     }
 }
