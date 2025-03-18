@@ -2,11 +2,10 @@ package com.example.app.service.impl;
 
 import com.example.app.entity.Trade;
 import com.example.app.parser.TradeParser;
+import com.example.app.producer.MessageProducer;
 import com.example.app.service.TradeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,13 +22,10 @@ public class TradeServiceImpl implements TradeService {
     @Autowired
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
-    @Value("${spring.cloud.stream.bindings.tradeEvent-out-0.destination}")
-    private String bindingName;
-
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     @Autowired
-    private StreamBridge streamBridge;
+    private MessageProducer messageProducer;
 
     @Autowired
     private TradeParser tradeParser;
@@ -49,14 +45,7 @@ public class TradeServiceImpl implements TradeService {
         return tradeParser.getParser(file)
                 .parse(file)
                 .flatMap(trade -> enrichTrade(trade)
-                        .doOnNext(enrichedTrade -> {
-                            boolean isSent = streamBridge.send(bindingName, enrichedTrade);
-                            if(isSent){
-                                log.info("Message was sent successfully: {}", enrichedTrade);
-                            }else {
-                                log.error("Message wasn't sent: {}", enrichedTrade);
-                            }
-                        }))
+                        .doOnNext(enrichedTrade -> messageProducer.send(enrichedTrade.toString())))
                 .map(this::convertTradeIntoLine)
                 .startWith("date,productName,currency,price")
                 .reduce((line1, line2) -> line1 + "\n" + line2)
