@@ -2,10 +2,11 @@ package com.example.app.service.impl;
 
 import com.example.app.entity.Trade;
 import com.example.app.parser.TradeParser;
-import com.example.app.producer.MessageProducer;
 import com.example.app.service.TradeService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,9 +24,8 @@ public class TradeServiceImpl implements TradeService {
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     @Autowired
-    private MessageProducer messageProducer;
+    private StreamBridge streamBridge;
 
     @Autowired
     private TradeParser tradeParser;
@@ -45,7 +45,7 @@ public class TradeServiceImpl implements TradeService {
         return tradeParser.getParser(file)
                 .parse(file)
                 .flatMap(trade -> enrichTrade(trade)
-                        .doOnNext(enrichedTrade -> messageProducer.send(enrichedTrade.toString())))
+                        .doOnNext(enrichedTrade -> streamBridge.send("trade-topic", enrichedTrade)))
                 .map(this::convertTradeIntoLine)
                 .startWith("date,productName,currency,price")
                 .reduce((line1, line2) -> line1 + "\n" + line2)
